@@ -1,20 +1,19 @@
 import express from "express";
-import userRoutes from "./routes/userRoutes";
-import clientRoutes from "./routes/clientRoutes";
-import taskRoutes from "./routes/taskRoutes";
-import dealRoutes from "./routes/dealRoutes";
+import userRoutes from '@modules/users/user.routes'
+import productRoutes from '@modules/products/product.routes'
+import orderRoutes from '@modules/orders/order.routes'
+import authRoutes from '@modules/auth/auth.routes'
 
-const app = express();
+const PORT = 5000
 
-app.use(express.json());
+const app = express()
+app.use(express.json())
 
-app.use("/users", userRoutes);
-app.use("/clients", clientRoutes);
-app.use("/tasks", taskRoutes);
-app.use("/deals", dealRoutes);
+app.use('/users', userRoutes)
+app.use('/product', productRoutes)
+app.use('/order', orderRoutes)
+app.use('/auth', authRoutes)
+app.listen(PORT , () => {
+  console.log(`🚀 Server running on port ${PORT}`)
+}) 
 
-const PORT = 3000;
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
