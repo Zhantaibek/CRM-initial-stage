@@ -3,6 +3,7 @@ dotenv.config();
 
 export const env = {
   PORT: process.env.PORT || 5000,
-  DATABASE_URL: process.env.DATABASE_URL!,
+  DATABASE_URL: process.env.DATABASE_URL!, 
   JWT_SECRET: process.env.JWT_SECRET || 'secret',
+  REFRESH_SECRET: process.env.REFRESH_SECRET || 'refresh_secret',
 };

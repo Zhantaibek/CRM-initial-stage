@@ -4,6 +4,7 @@
     "module": "CommonJS",
     "rootDir": "./src",
     "outDir": "./dist",
+    "typeRoots": ["./node_modules/@types", "./src/types"],
 
     "strict": true,
     "esModuleInterop": true,
@@ -15,7 +16,7 @@
 
     "moduleResolution": "node",
 
-    "types": ["node"],
+
 
     "baseUrl": "./src",
     "paths": {
@@ -24,6 +25,9 @@
       "@config/*": ["config/*"]
     }
   },
-  "include": ["src"],
+  "ts-node": {
+    "files": true
+  },
+  "include": ["src/**/*.ts", "src/**/*.d.ts"],
   "exclude": ["node_modules", "dist"]
 }

@@ -4,6 +4,7 @@ import { env } from '@config/env';
 
 export interface AuthRequest extends Request {
   userId?: number;
+  role? : string
 }
 
 export const authMiddleware = (
@@ -20,13 +21,14 @@ export const authMiddleware = (
 
     const token = authHeader.split(' ')[1]; 
 
-    if (!token) {
+    if (!token) { 
       return res.status(401).json({ message: 'Invalid token format' });
     }
 
-    const decoded = jwt.verify(token, env.JWT_SECRET) as { userId: number };
+    const decoded = jwt.verify(token, env.JWT_SECRET) as { userId: number , role : string };
 
     req.userId = decoded.userId;
+    req.role = decoded.role
 
     next();
     
