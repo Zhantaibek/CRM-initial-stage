@@ -1,59 +1,43 @@
-import { Request, Response } from "express";
+import { Request , Response } from "express";
+import { asyncHandler } from "shared/utils/asyncHandler";
 import { productService } from "./product.service";
 
+
 export const productController = {
-    createProduct: async (req: Request, res: Response) => {
-        try {
-            const { name, price } = req.body;
-            const product = await productService.createProduct(name, price);
-            res.status(201).json(product);
-        } catch (err: any) {
-            res.status(400).json({ message: err.message });
-        }
-    },
+    create : asyncHandler (async (req : Request , res : Response) => {
+        const product = await productService.create(
+            req.body.name,
+            req.body.price
+        )
 
-    getProducts: async (req: Request, res: Response) => {
-        try {
-            const products = await productService.getProducts();
-            res.status(200).json(products);
-        } catch (err: any) {
-            res.status(400).json({ message: err.message });
-        }
-    },
+        res.status(201).json({product})
+    }),
 
-    getProductById: async (req: Request, res: Response) => {
-        const id = Number(req.params.id);
-        if (isNaN(id)) return res.status(400).json({ message: 'Invalid product id' });
+    getAll : asyncHandler (async (req : Request , res : Response) => {
+        const products = await productService.getAll()
+        res.status(200).json({products})
+    }),
 
-        try {
-            const product = await productService.getProductById(id);
-            res.status(200).json(product);
-        } catch (err: any) {
-            res.status(404).json({ message: err.message });
-        }
-    },
+    getById : asyncHandler (async (req : Request , res : Response) => {
+        const product = await productService.getById(
+            Number(req.params.id)
+        )
+        res.status(200).json ({product})
+    }),
 
-    updateProduct: async (req: Request, res: Response) => {
-        const id = Number(req.params.id);
-        if (isNaN(id)) return res.status(400).json({ message: 'Invalid product id' });
+    update : asyncHandler (async (req : Request , res : Response) => {
+        const product = await productService.update(
+            Number(req.params.id),
+            req.body
+        )
+        res.status(200).json({product})
+    }),
 
-        try {
-            const product = await productService.updateProduct(id, req.body);
-            res.status(200).json(product);
-        } catch (err: any) {
-            res.status(404).json({ message: err.message });
-        }
-    },
-
-    deleteProduct: async (req: Request, res: Response) => {
-        const id = Number(req.params.id);
-        if (isNaN(id)) return res.status(400).json({ message: 'Invalid product id' });
-
-        try {
-            await productService.deleteProduct(id);
-            res.status(204).send(); 
-        } catch (err: any) {
-            res.status(404).json({ message: err.message });
-        }
-    }
-};
+    delete : asyncHandler (async (req : Request , res : Response) => {
+        const product = await productService.delete(
+            Number(req.params.id)
+        )
+        res.status(200).json({product})
+    })
+    
+}

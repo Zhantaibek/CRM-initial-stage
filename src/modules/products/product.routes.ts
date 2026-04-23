@@ -1,7 +1,10 @@
 import { Router } from "express";
 import { productController } from "./product.controller";
 import { authMiddleware } from "@common/middlewares/auth.middleware";
-import { roleMiddleware } from "@common/middlewares/roles.middleware";
+import { roles } from "@common/middlewares/roles.middleware";
+import { validate } from "@common/middlewares/validate.middleware";
+
+import { createProductSchema } from "./product.validators";
 
 const router = Router();
 
@@ -9,38 +12,38 @@ const router = Router();
 router.get(
   "/",
   authMiddleware,
-  productController.getProducts
+  productController.getAll
 );
 
 
 router.get(
   "/:id",
   authMiddleware,
-  productController.getProductById
+  productController.getById
 );
 
 
 router.post(
   "/",
   authMiddleware,
-  roleMiddleware(["admin"]),
-  productController.createProduct
+  roles("admin"),validate(createProductSchema),
+  productController.create
 );
 
 
 router.put(
   "/:id",
   authMiddleware,
-  roleMiddleware(["admin"]),
-  productController.updateProduct
+  roles("admin"),
+  productController.update
 );
 
 
 router.delete(
   "/:id",
   authMiddleware,
-  roleMiddleware(["admin"]),
-  productController.deleteProduct
+  roles("admin"),
+  productController.delete
 );
 
 export default router;

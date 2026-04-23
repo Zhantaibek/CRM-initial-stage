@@ -1,10 +1,10 @@
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { env } from '@config/env';
+import { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
+import { env } from "@config/env";
 
 export interface AuthRequest extends Request {
   userId?: number;
-  role? : string
+  role?: string;
 }
 
 export const authMiddleware = (
@@ -12,27 +12,22 @@ export const authMiddleware = (
   res: Response,
   next: NextFunction
 ) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const token = authHeader.split(" ")[1];
+
   try {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader) {
-      return res.status(401).json({ message: 'No token provided' });
-    }
-
-    const token = authHeader.split(' ')[1]; 
-
-    if (!token) { 
-      return res.status(401).json({ message: 'Invalid token format' });
-    }
-
-    const decoded = jwt.verify(token, env.JWT_SECRET) as { userId: number , role : string };
+    const decoded = jwt.verify(token, env.JWT_SECRET) as any;
 
     req.userId = decoded.userId;
-    req.role = decoded.role
+    req.role = decoded.role;
 
     next();
-    
-  } catch (err) {
-    return res.status(401).json({ message: 'Unauthorized' });
+  } catch {
+    return res.status(401).json({ message: "Invalid token" });
   }
 };

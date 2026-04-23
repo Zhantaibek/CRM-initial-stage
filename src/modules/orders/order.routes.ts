@@ -6,8 +6,8 @@ const router = Router()
 
 router.post('/',authMiddleware, orderController.createOrder)
 router.get('/', authMiddleware ,orderController.getOrders)
-router.get('/my', authMiddleware, orderController.getMyOrders);
+router.get('/my', authMiddleware, orderController.getMyOrder);
 router.get('/:id',authMiddleware, orderController.getOrderById)
-router.delete('/:id', authMiddleware ,orderController.deleteOrder)
+router.delete('/:id', authMiddleware ,orderController.delete)
 
 export default router

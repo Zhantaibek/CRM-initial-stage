@@ -1,52 +1,30 @@
-import {prisma} from '@config/db'
+import { productRepository } from "./product.repository";
+import { AppError } from "shared/errors/app-error";
 
 export const productService = {
-    createProduct : async (name : string , price : number ) => {
-        if (!name || price === undefined) {
-            throw new Error('name and price are required')
-        }
+  create: async (name: string, price: number) => {
+    return productRepository.create({ name, price });
+  },
 
-        return prisma.product.create({
-            data : {
-                name : name , 
-                price : price
-            }
-        })
-    },
+  getAll: async () => {
+    return productRepository.findAll();
+  },
 
-    getProducts : async () => {
-        return prisma.product.findMany()
-    },
+  getById: async (id: number) => {
+    const product = await productRepository.findById(id);
 
-    getProductById : async (id : number) => {
-        return prisma.product.findUnique({
-            where : {id}
-        })
-    },
-
-    updateProduct : async (id : number , data : {name? : string ,price? : number}) => {
-
-        const product = await prisma.product.findUnique({where : {id}})
-
-        if (!product) {
-            throw new Error('product not found')
-        }
-
-        return prisma.product.update({
-            where : {id} ,
-            data
-        })
-    },
-
-    deleteProduct : async (id : number ) => {
-
-        const product = await prisma.product.findUnique({where : {id}})
-
-        if (!product) {
-            throw new Error ('product not found')
-        }
-        return prisma.product.delete({
-            where : {id}
-        })
+    if (!product) {
+      throw new AppError("Product not found", 404);
     }
-}
+
+    return product;
+  },
+
+  update: async (id: number, data: any) => {
+    return productRepository.update(id , data)
+  },
+
+  delete : async (id : number) => {
+    return productRepository.delete(id)
+  }
+};

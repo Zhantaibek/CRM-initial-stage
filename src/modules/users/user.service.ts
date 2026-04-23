@@ -1,50 +1,40 @@
-import {prisma} from '@config/db'
+import { userRepository } from "./user.repository";
+import { AppError } from "shared/errors/app-error";
 
 export const userService = {
-    createUser: async (name: string, email: string) => {
-        if (!name || !email) {
-            throw new Error('Name and email are required');
-        }
 
-        return prisma.user.create({
-            data: {
-                name: name,
-                email: email, 
-            }
-        });
-    },
+  getAll: async () => {
+    return userRepository.findAll();
+  },
 
-    getUsers : async() => {
-        return prisma.user.findMany()
-    },
+  getById: async (id: number) => {
+    const user = await userRepository.findById(id);
 
-    getUserById : async (id : number) => {
-        return prisma.user.findUnique({
-            where : {id} 
-        })
-    },
-
-    updateUser : async (id : number , data : {name?: string , email? : string}) =>{
-
-        const user = await prisma.user.findUnique({where : {id}})
-
-        if (!user) {
-            throw new Error ('user not found')
-        }
-        return prisma.user.update({
-            where : {id},
-            data
-        })
-    },
-    deleteUser : async (id : number) => {
-
-        const user = await prisma.user.findUnique({where : {id}})
-
-        if (!user) {
-            throw new Error ('user not found')
-        }
-        return prisma.user.delete({
-            where : {id}
-        })
+    if (!user) {
+      throw new AppError("User not found", 404);
     }
-}
+
+    return user;
+  },
+
+  // 👤 user
+  updateMe: async (userId: number, data: any) => {
+    const allowedData = {
+      name: data.name,
+      email: data.email,
+    };
+
+    return userRepository.update(userId, allowedData);
+  },
+
+  // 👑 admin
+  delete: async (id: number) => {
+    const user = await userRepository.findById(id);
+
+    if (!user) {
+      throw new AppError("User not found", 404);
+    }
+
+    return userRepository.delete(id);
+  },
+};

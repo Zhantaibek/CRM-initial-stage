@@ -1,98 +1,39 @@
-import { prisma } from '@config/db'
+import { orderRepository } from './order.repository';
 
 export const orderService = {
-  
+
   createOrder: async (userId: number, productIds: number[]) => {
-  if (!userId || !productIds?.length) {
-    throw new Error('userId and at least one productId are required');
-  }
-
-  
-  const products = await prisma.product.findMany({
-    where: {
-      id: { in: productIds }
+    if (!userId || !productIds.length) {
+      throw new Error('userId and products required');
     }
-  });
 
-  if (products.length !== productIds.length) {
-    throw new Error('Some products not found');
-  }
-
-  
-  return prisma.order.create({
-    data: {
-      userId,
-      products: {
-        create: productIds.map(id => ({
-          productId: id
-        }))
-      }
-    },
-    include: {
-      products: {
-        include: {
-          product: true
-        }
-      }
-    }
-  });
-},
-
-  
-  getOrders: async () => {
-   return prisma.order.findMany({
-    include: {
-      products: {
-        include: {
-          product: true
-        }
-      },
-      user: true
-    }
-  });
+    return orderRepository.create(userId, productIds);
   },
 
+  getOrders: async () => {
+    return orderRepository.findAll();
+  },
 
   getOrderById: async (orderId: number, userId: number, role: string) => {
-    const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    include: {
-      products: {
-        include: {
-          product: true
-        }
-      }
+    const order = await orderRepository.findById(orderId);
+
+    if (!order) throw new Error('Order not found');
+
+    if (role !== 'admin' && order.userId !== userId) {
+      throw new Error('Forbidden');
     }
-  });
 
-  if (!order) {
-    throw new Error('Order not found');
-  }
-
-  
-  if (role !== 'admin' && order.userId !== userId) {
-    throw new Error('Forbidden');
-  }
-
-  return order;
+    return order;
   },
 
-    
   deleteOrder: async (id: number) => {
-    const order = await prisma.order.findUnique({ where: { id } })
-    if (!order) throw new Error('Order not found')
-    return prisma.order.delete({ where: { id } })
+    const order = await orderRepository.findById(id);
+    if (!order) throw new Error('Order not found');
+
+    return orderRepository.delete(id);
   },
 
-  getMyOrders : async (userId : number) => {
-    return prisma.order.findMany({
-      include : {
-        products: {
-          include : {
-            product : true
-          }
-        }
-      }
-    })
-  }
+  getMyOrders: async (userId: number) => {
+  return orderRepository.findUserId(userId);
 }
+};
