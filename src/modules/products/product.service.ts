@@ -1,5 +1,5 @@
 import { productRepository } from "./product.repository";
-import { AppError } from "shared/errors/app-error";
+import { AppError } from "core/errors/app-error";
 
 export const productService = {
   create: async (name: string, price: number) => {
@@ -21,10 +21,10 @@ export const productService = {
   },
 
   update: async (id: number, data: any) => {
-    return productRepository.update(id , data)
+    return productRepository.update(id, data);
   },
 
-  delete : async (id : number) => {
-    return productRepository.delete(id)
-  }
+  delete: async (id: number) => {
+    return productRepository.delete(id);
+  },
 };

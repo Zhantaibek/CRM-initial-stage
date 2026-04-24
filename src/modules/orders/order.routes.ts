@@ -1,13 +1,13 @@
-import { Router } from 'express'
-import { orderController } from './order.controller'
-import { authMiddleware } from '@common/middlewares/auth.middleware'
+import { Router } from "express";
+import { orderController } from "./order.controller";
+import { authMiddleware } from "core/middlewares/auth.middleware";
 
-const router = Router()
+const router = Router();
 
-router.post('/',authMiddleware, orderController.createOrder)
-router.get('/', authMiddleware ,orderController.getOrders)
-router.get('/my', authMiddleware, orderController.getMyOrder);
-router.get('/:id',authMiddleware, orderController.getOrderById)
-router.delete('/:id', authMiddleware ,orderController.delete)
+router.post("/", authMiddleware, orderController.createOrder);
+router.get("/", authMiddleware, orderController.getOrders);
+router.get("/my", authMiddleware, orderController.getMyOrder);
+router.get("/:id", authMiddleware, orderController.getOrderById);
+router.delete("/:id", authMiddleware, orderController.delete);
 
-export default router
+export default router;

@@ -1,47 +1,40 @@
 import { Response } from "express";
 import { orderService } from "./order.service";
-import { asyncHandler } from "shared/utils/asyncHandler";
-import { AuthRequest } from "@common/middlewares/auth.middleware";
+import { asyncHandler } from "core/utils/asyncHandler";
+import { AuthRequest } from "core/middlewares/auth.middleware";
 
 export const orderController = {
-
   createOrder: asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { productIds } = req.body;
+    const { productIds } = req.body;
 
-  const order = await orderService.createOrder(
-    req.userId!,
-    productIds
-  );
+    const order = await orderService.createOrder(req.userId!, productIds);
 
-  res.status(201).json(order);
-}),
+    res.status(201).json(order);
+  }),
 
-getOrders: asyncHandler(async (req: AuthRequest, res: Response) => {
-  const orders = await orderService.getOrders();
-  res.status(200).json(orders);
-}),
+  getOrders: asyncHandler(async (req: AuthRequest, res: Response) => {
+    const orders = await orderService.getOrders();
+    res.status(200).json(orders);
+  }),
 
-getOrderById: asyncHandler(async (req: AuthRequest, res: Response) => {
-  const order = await orderService.getOrderById(
-    Number(req.params.id),
-    req.userId!,
-    req.role!
-  );
+  getOrderById: asyncHandler(async (req: AuthRequest, res: Response) => {
+    const order = await orderService.getOrderById(
+      Number(req.params.id),
+      req.userId!,
+      req.role!
+    );
 
-  res.status(200).json(order);
-}),
+    res.status(200).json(order);
+  }),
 
-delete: asyncHandler(async (req: AuthRequest, res: Response) => {
-  const order = await orderService.deleteOrder(
-    Number(req.params.id)
-  );
+  delete: asyncHandler(async (req: AuthRequest, res: Response) => {
+    const order = await orderService.deleteOrder(Number(req.params.id));
 
-  res.status(200).json(order);
-}),
+    res.status(200).json(order);
+  }),
 
-getMyOrder: asyncHandler(async (req: AuthRequest, res: Response) => {
-  const orders = await orderService.getMyOrders(req.userId!);
-  res.status(200).json(orders);
-})
-
-}
+  getMyOrder: asyncHandler(async (req: AuthRequest, res: Response) => {
+    const orders = await orderService.getMyOrders(req.userId!);
+    res.status(200).json(orders);
+  }),
+};

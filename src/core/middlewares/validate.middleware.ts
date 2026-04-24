@@ -11,10 +11,10 @@ export const validate = (schema: ZodSchema) => {
       });
 
       next();
-    } catch (error: any) {
+    } catch (err: any) {
       return res.status(400).json({
         success: false,
-        error: error.errors,
+        errors: err.errors,
       });
     }
   };

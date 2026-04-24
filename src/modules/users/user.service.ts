@@ -1,8 +1,7 @@
 import { userRepository } from "./user.repository";
-import { AppError } from "shared/errors/app-error";
+import { AppError } from "core/errors/app-error";
 
 export const userService = {
-
   getAll: async () => {
     return userRepository.findAll();
   },
@@ -17,7 +16,7 @@ export const userService = {
     return user;
   },
 
-  // 👤 user
+  
   updateMe: async (userId: number, data: any) => {
     const allowedData = {
       name: data.name,

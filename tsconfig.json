@@ -20,7 +20,7 @@
 
     "baseUrl": "./src",
     "paths": {
-      "@common/*": ["common/*"],
+      "@core/*": ["core/*"],
       "@modules/*": ["modules/*"],
       "@config/*": ["config/*"]
     }
