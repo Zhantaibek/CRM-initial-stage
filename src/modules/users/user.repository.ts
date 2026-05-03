@@ -32,6 +32,4 @@ export const userRepository = {
     })
   },
 
-
-
 };

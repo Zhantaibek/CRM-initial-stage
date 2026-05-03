@@ -26,7 +26,7 @@ export const userService = {
     return userRepository.update(userId, allowedData);
   },
 
-  // 👑 admin
+  
   delete: async (id: number) => {
     const user = await userRepository.findById(id);
 

@@ -1,6 +1,10 @@
 import { Request } from 'express';
 
-export interface AuthRequest extends Request {
-  userId?: number;
-  role? : string;
+declare global {
+  namespace Express {
+    interface Request {
+      userId?: number;
+      role?: string;
+    }
+  }
 }

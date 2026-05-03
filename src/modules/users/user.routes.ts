@@ -7,23 +7,13 @@ import { updateMeSchema, userIdSchema } from "./user.validation";
 
 const router = Router();
 
+
+router.get("/me", authMiddleware, userController.getMe);
+router.patch("/me", authMiddleware, validate(updateMeSchema), userController.updateMe);
+
+
 router.get("/", authMiddleware, roles("admin"), userController.getAll);
-
+router.get("/:id", authMiddleware, roles("admin"), validate(userIdSchema), userController.getById);
 router.delete("/:id", authMiddleware, roles("admin"), userController.delete);
-
-router.get(
-  "/:id",
-  authMiddleware,
-  roles("admin"),
-  validate(userIdSchema),
-  userController.getById
-);
-
-router.patch(
-  "/me",
-  authMiddleware,
-  validate(updateMeSchema),
-  userController.updateMe
-);
 
 export default router;

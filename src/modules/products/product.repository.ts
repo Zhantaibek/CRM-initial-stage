@@ -1,5 +1,5 @@
 import {prisma} from '@config/db'
-import { create } from 'domain'
+
 
 export const productRepository = {
     create : (data : { name : string , price : number}) => {

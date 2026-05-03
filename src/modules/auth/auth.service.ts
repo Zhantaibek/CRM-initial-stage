@@ -2,31 +2,27 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { env } from "@config/env";
 import { authRepository } from "./auth.repository";
+import { AppError } from "core/errors/app-error";
 
 export const authService = {
 
   signup: async (name: string, email: string, password: string) => {
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const existing = await authRepository.findByEmail(email);
+    if (existing) throw new AppError("Email already in use", 409);
 
-    return authRepository.createUser({
-      name,
-      email,
-      password: hashedPassword,
-    });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    return authRepository.createUser({ name, email, password: hashedPassword });
   },
 
   login: async (email: string, password: string) => {
     const user = await authRepository.findByEmail(email);
 
     if (!user || !user.password) {
-      throw new Error("Invalid credentials");
+      throw new AppError("Invalid credentials", 401);
     }
 
     const isValid = await bcrypt.compare(password, user.password);
-
-    if (!isValid) {
-      throw new Error("Invalid credentials");
-    }
+    if (!isValid) throw new AppError("Invalid credentials", 401);
 
     const accessToken = jwt.sign(
       { userId: user.id, role: user.role },
@@ -46,32 +42,31 @@ export const authService = {
   },
 
   logout: async (userId: number) => {
-  const user = await authRepository.findById(userId);
+    const user = await authRepository.findById(userId);
+    if (!user) throw new AppError("User not found", 404);
 
-  if (!user) {
-    throw new Error("User not found");
-  }
-
-  await authRepository.logout(userId);
-
-  return { message: "Logged out successfully" };
-},
+    await authRepository.logout(userId);
+    return { message: "Logged out successfully" };
+  },
 
   refresh: async (token: string) => {
-    const decoded = jwt.verify(token, env.REFRESH_SECRET) as any;
+    try {
+      const decoded = jwt.verify(token, env.REFRESH_SECRET) as any;
+      const user = await authRepository.findById(decoded.userId);
 
-    const user = await authRepository.findById(decoded.userId);
+      if (!user || user.refreshToken !== token) {
+        throw new AppError("Invalid refresh token", 401);
+      }
 
-    if (!user || user.refreshToken !== token) {
-      throw new Error("Invalid refresh token");
+      const newAccessToken = jwt.sign(
+        { userId: user.id, role: user.role },
+        env.JWT_SECRET,
+        { expiresIn: "15m" }
+      );
+
+      return { accessToken: newAccessToken };
+    } catch {
+      throw new AppError("Invalid refresh token", 401);
     }
-
-    const newAccessToken = jwt.sign(
-      { userId: user.id, role: user.role },
-      env.JWT_SECRET,
-      { expiresIn: "15m" }
-    );
-
-    return { accessToken: newAccessToken };
   },
 };

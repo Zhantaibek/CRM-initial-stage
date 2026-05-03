@@ -7,50 +7,49 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model user {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String   @unique
-  password  String?
-  role      String   @default("user")
-  refreshToken  String? 
-  createdAt DateTime @default(now())
-  
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  password     String?
+  role         String   @default("user")
+  refreshToken String?
+  createdAt    DateTime @default(now())
 
-  orders    order[]
+  orders Order[]
 
   @@map("users")
 }
 
-model product {
+model Product {
   id        Int      @id @default(autoincrement())
   name      String
   price     Decimal  @db.Decimal(10, 2)
   createdAt DateTime @default(now())
 
-  orders    orderProduct[]
+  orders OrderProduct[]
 
   @@map("products")
 }
 
-model order {
+model Order {
   id        Int      @id @default(autoincrement())
   userId    Int
   createdAt DateTime @default(now())
 
-  user      user           @relation(fields: [userId], references: [id])
-  products  orderProduct[]
+  user     User           @relation(fields: [userId], references: [id])
+  products OrderProduct[]
 
   @@map("orders")
 }
 
-model orderProduct {
+model OrderProduct {
   id        Int @id @default(autoincrement())
   orderId   Int
   productId Int
 
-  order     order   @relation(fields: [orderId], references: [id])
-  product   product @relation(fields: [productId], references: [id])
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
 
   @@map("order_products")
 }
