@@ -36,3 +36,6 @@ coverage
 # optional
 tmp
 temp
+
+logs/
+*.log
