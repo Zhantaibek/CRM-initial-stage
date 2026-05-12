@@ -5,6 +5,7 @@ import userRoutes from "@modules/users/user.routes";
 import productRoutes from "@modules/products/product.routes";
 import orderRoutes from "@modules/orders/order.routes";
 import authRoutes from "@modules/auth/auth.routes";
+import postRoutes from '@modules/posts/post.routes';
 import { errorMiddleware } from "core/errors/error.middleware";
 import swaggerUi from 'swagger-ui-express';
 import { swaggerDocument } from '@config/swagger';
@@ -21,6 +22,7 @@ app.use("/users", userRoutes);
 app.use("/products", productRoutes);
 app.use("/orders", orderRoutes);
 app.use("/auth", authRoutes);
+app.use("/posts", postRoutes)
 
 app.use(errorMiddleware);
 

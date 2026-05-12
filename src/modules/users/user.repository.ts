@@ -25,7 +25,7 @@ export const userRepository = {
     })
   }, 
 
-  update : (id : number , data : {name? : string , email? : string ,password? : string }) => {
+  update : (id : number , data : {name? : string , surname? : string ,  email? : string ,password? : string }) => {
     return prisma.user.update({
       where : {id},
       data

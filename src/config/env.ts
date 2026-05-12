@@ -13,4 +13,6 @@ export const env = {
   DATABASE_URL: required('DATABASE_URL'),
   JWT_SECRET: required('JWT_SECRET'),
   REFRESH_SECRET: required('REFRESH_SECRET'),
+  RESEND_API_KEY: required('RESEND_API_KEY'),
+  CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:5175',
 };

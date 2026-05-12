@@ -4,15 +4,19 @@ import bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-
   const hashedPassword = await bcrypt.hash('123456', 10);
+
+  await prisma.user.deleteMany({
+    where: { email: { in: ['john@test.com', 'admin@test.com'] } }
+  });
 
   const user = await prisma.user.create({
     data: {
       name: 'John Doe',
       email: 'john@test.com',
       password: hashedPassword,
-      role: 'user'
+      role: 'user',
+      isVerified: true,
     }
   });
 
@@ -21,41 +25,12 @@ async function main() {
       name: 'Admin',
       email: 'admin@test.com',
       password: hashedPassword,
-      role: 'admin'
+      role: 'admin',
+      isVerified: true,
     }
   });
 
-  const product1 = await prisma.product.create({
-    data: {
-      name: 'Laptop',
-      price: 1200
-    }
-  });
-
-  const product2 = await prisma.product.create({
-    data: {
-      name: 'Phone',
-      price: 800
-    }
-  });
-
-  const order = await prisma.order.create({
-    data: {
-      userId: user.id,
-      products: {
-        create: [
-          { productId: product1.id },
-          { productId: product2.id }
-        ]
-      }
-    },
-    include: {
-      products: true
-    }
-  });
-
-  console.log('Seed completed:', { user, admin, product1, product2, order });
+  console.log('Seed completed:', { user, admin });
 }
 
-main()
-  .finally(() => prisma.$disconnect());
+main().finally(() => prisma.$disconnect());

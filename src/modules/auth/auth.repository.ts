@@ -9,15 +9,31 @@ export const authRepository = {
     return prisma.user.findUnique({ where: { id } });
   },
 
+  findByVerificationToken: (token: string) => {
+    return prisma.user.findFirst({ where: { verificationToken: token } });
+  },
+
   createUser: (data: {
     name: string;
     email: string;
     password: string;
+    verificationToken: string;
   }) => {
     return prisma.user.create({
       data: {
         ...data,
         role: "user",
+        isVerified: false,
+      },
+    });
+  },
+
+  verifyUser: (id: number) => {
+    return prisma.user.update({
+      where: { id },
+      data: {
+        isVerified: true,
+        verificationToken: null,
       },
     });
   },
@@ -30,9 +46,9 @@ export const authRepository = {
   },
 
   logout: (userId: number) => {
-  return prisma.user.update({
-    where: { id: userId },
-    data: { refreshToken: null },
-  });
-},
+    return prisma.user.update({
+      where: { id: userId },
+      data: { refreshToken: null },
+    });
+  },
 };

@@ -8,13 +8,15 @@ generator client {
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
-  name         String
-  email        String   @unique
-  password     String?
-  role         String   @default("user")
-  refreshToken String?
-  createdAt    DateTime @default(now())
+  id                Int      @id @default(autoincrement())
+  name              String
+  email             String   @unique
+  password          String?
+  role              String   @default("user")
+  refreshToken      String?
+  isVerified        Boolean  @default(false)
+  verificationToken String?
+  createdAt         DateTime @default(now())
 
   orders Order[]
 
@@ -52,4 +54,16 @@ model OrderProduct {
   product Product @relation(fields: [productId], references: [id])
 
   @@map("order_products")
+}
+
+model Post {
+  id       Int  @id @default(autoincrement())
+  title    String
+  excerpt  String
+  content  String
+  category String
+  readTime String
+  createdAt  DateTime @default(now())
+
+  @@map("posts")
 }

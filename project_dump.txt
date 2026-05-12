@@ -1,0 +1,2103 @@
+﻿// ===== C:\Users\User\Desktop\CRM\prisma\seed.ts =====
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
+
+const prisma = new PrismaClient();
+
+async function main() {
+
+  const hashedPassword = await bcrypt.hash('123456', 10);
+
+  const user = await prisma.user.create({
+    data: {
+      name: 'John Doe',
+      email: 'john@test.com',
+      password: hashedPassword,
+      role: 'user'
+    }
+  });
+
+  const admin = await prisma.user.create({
+    data: {
+      name: 'Admin',
+      email: 'admin@test.com',
+      password: hashedPassword,
+      role: 'admin'
+    }
+  });
+
+  const product1 = await prisma.product.create({
+    data: {
+      name: 'Laptop',
+      price: 1200
+    }
+  });
+
+  const product2 = await prisma.product.create({
+    data: {
+      name: 'Phone',
+      price: 800
+    }
+  });
+
+  const order = await prisma.order.create({
+    data: {
+      userId: user.id,
+      products: {
+        create: [
+          { productId: product1.id },
+          { productId: product2.id }
+        ]
+      }
+    },
+    include: {
+      products: true
+    }
+  });
+
+  console.log('Seed completed:', { user, admin, product1, product2, order });
+}
+
+main()
+  .finally(() => prisma.$disconnect());
+
+
+// ===== C:\Users\User\Desktop\CRM\src\config\db.ts =====
+import { PrismaClient } from '@prisma/client';
+
+export const prisma = new PrismaClient();
+
+
+// ===== C:\Users\User\Desktop\CRM\src\config\env.ts =====
+import dotenv from 'dotenv';
+dotenv.config();
+
+const required = (key: string): string => {
+  const value = process.env[key];
+  if (!value) throw new Error(`Missing required env variable: ${key}`);
+  return value;
+};
+
+export const env = {
+  PORT: process.env.PORT || 5000,
+  NODE_ENV: process.env.NODE_ENV || 'development',
+  DATABASE_URL: required('DATABASE_URL'),
+  JWT_SECRET: required('JWT_SECRET'),
+  REFRESH_SECRET: required('REFRESH_SECRET'),
+};
+
+
+// ===== C:\Users\User\Desktop\CRM\src\config\swagger.ts =====
+export const swaggerDocument = {
+  openapi: '3.0.0',
+  info: {
+    title: 'CRM API',
+    version: '1.0.0',
+    description: 'API РґРѕРєСѓРјРµРЅС‚Р°С†РёСЏ РґР»СЏ CRM РїСЂРѕРµРєС‚Р°',
+  },
+  servers: [{ url: 'http://localhost:5000' }],
+  components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+      },
+    },
+    schemas: {
+      User: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer' },
+          name: { type: 'string' },
+          email: { type: 'string' },
+          role: { type: 'string', enum: ['user', 'admin'] },
+          createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      Product: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer' },
+          name: { type: 'string' },
+          price: { type: 'number' },
+          createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      Order: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer' },
+          userId: { type: 'integer' },
+          createdAt: { type: 'string', format: 'date-time' },
+          products: {
+            type: 'array',
+            items: { type: 'object' },
+          },
+        },
+      },
+      Error: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: false },
+          message: { type: 'string' },
+        },
+      },
+    },
+  },
+  paths: {
+    '/auth/signup': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Р РµРіРёСЃС‚СЂР°С†РёСЏ',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'email', 'password'],
+                properties: {
+                  name: { type: 'string', example: 'John Doe' },
+                  email: { type: 'string', example: 'john@test.com' },
+                  password: { type: 'string', example: '123456' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: { description: 'РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ СЃРѕР·РґР°РЅ' },
+          409: { description: 'Email СѓР¶Рµ Р·Р°РЅСЏС‚' },
+        },
+      },
+    },
+    '/auth/login': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Р’С…РѕРґ',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['email', 'password'],
+                properties: {
+                  email: { type: 'string', example: 'john@test.com' },
+                  password: { type: 'string', example: '123456' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'Р’РѕР·РІСЂР°С‰Р°РµС‚ accessToken Рё refreshToken' },
+          401: { description: 'РќРµРІРµСЂРЅС‹Рµ credentials' },
+        },
+      },
+    },
+    '/auth/logout': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Р’С‹С…РѕРґ',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: 'РЈСЃРїРµС€РЅС‹Р№ РІС‹С…РѕРґ' },
+          401: { description: 'РќРµ Р°РІС‚РѕСЂРёР·РѕРІР°РЅ' },
+        },
+      },
+    },
+    '/auth/refresh': {
+      post: {
+        tags: ['Auth'],
+        summary: 'РћР±РЅРѕРІРёС‚СЊ access token',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  refreshToken: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'РќРѕРІС‹Р№ accessToken' },
+          401: { description: 'РќРµРІР°Р»РёРґРЅС‹Р№ refresh token' },
+        },
+      },
+    },
+    '/products': {
+      get: {
+        tags: ['Products'],
+        summary: 'РЎРїРёСЃРѕРє РїСЂРѕРґСѓРєС‚РѕРІ',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: 'РЎРїРёСЃРѕРє РїСЂРѕРґСѓРєС‚РѕРІ' },
+          401: { description: 'РќРµ Р°РІС‚РѕСЂРёР·РѕРІР°РЅ' },
+        },
+      },
+      post: {
+        tags: ['Products'],
+        summary: 'РЎРѕР·РґР°С‚СЊ РїСЂРѕРґСѓРєС‚ (admin)',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'price'],
+                properties: {
+                  name: { type: 'string', example: 'Laptop' },
+                  price: { type: 'number', example: 1200 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: { description: 'РџСЂРѕРґСѓРєС‚ СЃРѕР·РґР°РЅ' },
+          400: { description: 'РћС€РёР±РєР° РІР°Р»РёРґР°С†РёРё' },
+          403: { description: 'РќРµС‚ РїСЂР°РІ' },
+        },
+      },
+    },
+    '/products/{id}': {
+      get: {
+        tags: ['Products'],
+        summary: 'РџРѕР»СѓС‡РёС‚СЊ РїСЂРѕРґСѓРєС‚ РїРѕ id',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+        responses: {
+          200: { description: 'РџСЂРѕРґСѓРєС‚' },
+          404: { description: 'РќРµ РЅР°Р№РґРµРЅ' },
+        },
+      },
+      put: {
+        tags: ['Products'],
+        summary: 'РћР±РЅРѕРІРёС‚СЊ РїСЂРѕРґСѓРєС‚ (admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+        requestBody: {
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  price: { type: 'number' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'РџСЂРѕРґСѓРєС‚ РѕР±РЅРѕРІР»С‘РЅ' },
+          403: { description: 'РќРµС‚ РїСЂР°РІ' },
+        },
+      },
+      delete: {
+        tags: ['Products'],
+        summary: 'РЈРґР°Р»РёС‚СЊ РїСЂРѕРґСѓРєС‚ (admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+        responses: {
+          200: { description: 'РџСЂРѕРґСѓРєС‚ СѓРґР°Р»С‘РЅ' },
+          403: { description: 'РќРµС‚ РїСЂР°РІ' },
+        },
+      },
+    },
+    '/orders': {
+      get: {
+        tags: ['Orders'],
+        summary: 'Р’СЃРµ Р·Р°РєР°Р·С‹ (admin)',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: 'РЎРїРёСЃРѕРє Р·Р°РєР°Р·РѕРІ' },
+          403: { description: 'РќРµС‚ РїСЂР°РІ' },
+        },
+      },
+      post: {
+        tags: ['Orders'],
+        summary: 'РЎРѕР·РґР°С‚СЊ Р·Р°РєР°Р·',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['productIds'],
+                properties: {
+                  productIds: {
+                    type: 'array',
+                    items: { type: 'integer' },
+                    example: [1, 2],
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: { description: 'Р—Р°РєР°Р· СЃРѕР·РґР°РЅ' },
+          400: { description: 'РћС€РёР±РєР° РІР°Р»РёРґР°С†РёРё' },
+        },
+      },
+    },
+    '/orders/my': {
+      get: {
+        tags: ['Orders'],
+        summary: 'РњРѕРё Р·Р°РєР°Р·С‹',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: 'РЎРїРёСЃРѕРє РјРѕРёС… Р·Р°РєР°Р·РѕРІ' },
+          401: { description: 'РќРµ Р°РІС‚РѕСЂРёР·РѕРІР°РЅ' },
+        },
+      },
+    },
+    '/orders/{id}': {
+      get: {
+        tags: ['Orders'],
+        summary: 'РџРѕР»СѓС‡РёС‚СЊ Р·Р°РєР°Р· РїРѕ id',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+        responses: {
+          200: { description: 'Р—Р°РєР°Р·' },
+          403: { description: 'РќРµС‚ РїСЂР°РІ' },
+          404: { description: 'РќРµ РЅР°Р№РґРµРЅ' },
+        },
+      },
+      delete: {
+        tags: ['Orders'],
+        summary: 'РЈРґР°Р»РёС‚СЊ Р·Р°РєР°Р· (admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+        responses: {
+          200: { description: 'Р—Р°РєР°Р· СѓРґР°Р»С‘РЅ' },
+          403: { description: 'РќРµС‚ РїСЂР°РІ' },
+        },
+      },
+    },
+    '/users': {
+      get: {
+        tags: ['Users'],
+        summary: 'РЎРїРёСЃРѕРє РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№ (admin)',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: 'РЎРїРёСЃРѕРє РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№' },
+          403: { description: 'РќРµС‚ РїСЂР°РІ' },
+        },
+      },
+    },
+    '/users/me': {
+      get: {
+        tags: ['Users'],
+        summary: 'РџРѕР»СѓС‡РёС‚СЊ СЃРІРѕР№ РїСЂРѕС„РёР»СЊ',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: 'РџСЂРѕС„РёР»СЊ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ' },
+          401: { description: 'РќРµ Р°РІС‚РѕСЂРёР·РѕРІР°РЅ' },
+        },
+      },
+      patch: {
+        tags: ['Users'],
+        summary: 'РћР±РЅРѕРІРёС‚СЊ СЃРІРѕР№ РїСЂРѕС„РёР»СЊ',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', example: 'New Name' },
+                  email: { type: 'string', example: 'new@email.com' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'РџСЂРѕС„РёР»СЊ РѕР±РЅРѕРІР»С‘РЅ' },
+          400: { description: 'РћС€РёР±РєР° РІР°Р»РёРґР°С†РёРё' },
+        },
+      },
+    },
+    '/users/{id}': {
+      get: {
+        tags: ['Users'],
+        summary: 'РџРѕР»СѓС‡РёС‚СЊ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РїРѕ id (admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+        responses: {
+          200: { description: 'РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ' },
+          404: { description: 'РќРµ РЅР°Р№РґРµРЅ' },
+        },
+      },
+      delete: {
+        tags: ['Users'],
+        summary: 'РЈРґР°Р»РёС‚СЊ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ (admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+        responses: {
+          200: { description: 'РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ СѓРґР°Р»С‘РЅ' },
+          403: { description: 'РќРµС‚ РїСЂР°РІ' },
+        },
+      },
+    },
+  },
+};
+
+
+// ===== C:\Users\User\Desktop\CRM\src\core\errors\app-error.ts =====
+export class AppError extends Error {
+  statusCode: number;
+  isOperational: boolean;
+
+  constructor(message: string, statusCode: number) {
+    super(message);
+
+    this.statusCode = statusCode;
+    this.isOperational = true;
+
+    Error.captureStackTrace(this, this.constructor);
+  }
+}
+
+
+// ===== C:\Users\User\Desktop\CRM\src\core\errors\error.middleware.ts =====
+import { Request, Response, NextFunction } from "express";
+import { AppError } from "./app-error";
+import { logger } from "core/utils/logger";
+
+export const errorMiddleware = (
+  err: any,
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  let statusCode = 500;
+  let message = "Internal Server Error";
+
+  if (err instanceof AppError) {
+    statusCode = err.statusCode;
+    message = err.message;
+
+    // РћРїРµСЂР°С†РёРѕРЅРЅС‹Рµ РѕС€РёР±РєРё вЂ” СЌС‚Рѕ РѕР¶РёРґР°РµРјРѕ, Р»РѕРіРёСЂСѓРµРј РєР°Рє warn
+    logger.warn(`[${statusCode}] ${message} вЂ” ${req.method} ${req.path}`);
+  } else {
+    // РќРµРѕР¶РёРґР°РЅРЅС‹Рµ РѕС€РёР±РєРё вЂ” Р»РѕРіРёСЂСѓРµРј РєР°Рє error СЃ РїРѕР»РЅС‹Рј СЃС‚РµРєС‚СЂРµР№СЃРѕРј
+    logger.error(`Unexpected error: ${err.message}\n${err.stack}`);
+  }
+
+  res.status(statusCode).json({
+    success: false,
+    message,
+  });
+};
+
+
+// ===== C:\Users\User\Desktop\CRM\src\core\middlewares\auth.middleware.ts =====
+import { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
+import { env } from "@config/env";
+
+export interface AuthRequest extends Request {
+  userId?: number;
+  role?: string;
+}
+
+export const authMiddleware = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  try {
+    const decoded = jwt.verify(token, env.JWT_SECRET) as any;
+
+    req.userId = decoded.userId;
+    req.role = decoded.role;
+
+    next();
+  } catch {
+    return res.status(401).json({ message: "Invalid token" });
+  }
+};
+
+
+// ===== C:\Users\User\Desktop\CRM\src\core\middlewares\roles.middleware.ts =====
+import { Response, NextFunction } from "express";
+import { AuthRequest } from "./auth.middleware";
+
+export const roles = (...allowedRoles: string[]) => {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.role) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!allowedRoles.includes(req.role)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    next();
+  };
+};
+
+
+// ===== C:\Users\User\Desktop\CRM\src\core\middlewares\validate.middleware.ts =====
+import { Request, Response, NextFunction } from "express";
+import { ZodSchema } from "zod";
+
+export const validate = (schema: ZodSchema) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    try {
+      schema.parse({
+        body: req.body,
+        params: req.params,
+        query: req.query,
+      });
+
+      next();
+    } catch (err: any) {
+      return res.status(400).json({
+        success: false,
+        errors: err.errors,
+      });
+    }
+  };
+};
+
+
+
+// ===== C:\Users\User\Desktop\CRM\src\core\types\auth-request.ts =====
+import { Request } from 'express';
+
+declare global {
+  namespace Express {
+    interface Request {
+      userId?: number;
+      role?: string;
+    }
+  }
+}
+
+
+// ===== C:\Users\User\Desktop\CRM\src\core\utils\asyncHandler.ts =====
+import { Request, Response, NextFunction } from "express";
+
+export const asyncHandler = (fn: any) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    Promise
+    .resolve(fn(req, res, next))
+    .catch(next);
+  };
+};
+
+
+// ===== C:\Users\User\Desktop\CRM\src\core\utils\helpers.ts =====
+
+
+
+// ===== C:\Users\User\Desktop\CRM\src\core\utils\logger.ts =====
+import winston from 'winston';
+import { env } from '@config/env';
+
+const levels = {
+  error: 0,
+  warn: 1,
+  info: 2,
+  http: 3,
+  debug: 4,
+};
+
+const format = winston.format.combine(
+  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+  winston.format.printf(
+    ({ timestamp, level, message }) => `${timestamp} [${level.toUpperCase()}]: ${message}`
+  )
+);
+
+const transports = [
+  new winston.transports.Console(),
+  new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
+  new winston.transports.File({ filename: 'logs/combined.log' }),
+];
+
+export const logger = winston.createLogger({
+  level: env.NODE_ENV === 'production' ? 'warn' : 'debug',
+  levels,
+  format,
+  transports,
+});
+
+
+// ===== C:\Users\User\Desktop\CRM\src\modules\auth\auth.controller.ts =====
+import { Request, Response } from "express";
+import { asyncHandler } from "core/utils/asyncHandler";
+import { authService } from "./auth.service";
+import { AuthRequest } from "core/middlewares/auth.middleware";
+
+export const authController = {
+  signup: asyncHandler(async (req: Request, res: Response) => {
+    const user = await authService.signup(
+      req.body.name,
+      req.body.email,
+      req.body.password
+    );
+
+    res.status(201).json(user);
+  }),
+
+  login: asyncHandler(async (req: Request, res: Response) => {
+    const tokens = await authService.login(req.body.email, req.body.password);
+
+    res.json(tokens);
+  }),
+
+  logout: asyncHandler(async (req: AuthRequest, res: Response) => {
+    const result = await authService.logout(req.userId!);
+
+    res.json(result);
+  }),
+
+  refresh: asyncHandler(async (req: Request, res: Response) => {
+    const { refreshToken } = req.body;
+
+    const tokens = await authService.refresh(refreshToken);
+
+    res.json(tokens);
+  }),
+};
+
+
+
+// ===== C:\Users\User\Desktop\CRM\src\modules\auth\auth.repository.ts =====
+import { prisma } from "@config/db";
+
+export const authRepository = {
+  findByEmail: (email: string) => {
+    return prisma.user.findUnique({ where: { email } });
+  },
+
+  findById: (id: number) => {
+    return prisma.user.findUnique({ where: { id } });
+  },
+
+  createUser: (data: {
+    name: string;
+    email: string;
+    password: string;
+  }) => {
+    return prisma.user.create({
+      data: {
+        ...data,
+        role: "user",
+      },
+    });
+  },
+
+  saveRefreshToken: (userId: number, token: string) => {
+    return prisma.user.update({
+      where: { id: userId },
+      data: { refreshToken: token },
+    });
+  },
+
+  logout: (userId: number) => {
+  return prisma.user.update({
+    where: { id: userId },
+    data: { refreshToken: null },
+  });
+},
+};
+
+
+// ===== C:\Users\User\Desktop\CRM\src\modules\auth\auth.routes.ts =====
+import { Router } from "express";
+import { authController } from "./auth.controller";
+import { authMiddleware } from "core/middlewares/auth.middleware";
+
+const router = Router();
+
+router.post("/signup", authController.signup);
+router.post("/login", authController.login);
+router.post("/refresh", authController.refresh);
+router.post("/logout", authMiddleware, authController.logout);
+
+export default router;
+
+
+
+// ===== C:\Users\User\Desktop\CRM\src\modules\auth\auth.service.ts =====
+import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
+import { env } from "@config/env";
+import { authRepository } from "./auth.repository";
+import { AppError } from "core/errors/app-error";
+
+export const authService = {
+
+  signup: async (name: string, email: string, password: string) => {
+    const existing = await authRepository.findByEmail(email);
+    if (existing) throw new AppError("Email already in use", 409);
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    return authRepository.createUser({ name, email, password: hashedPassword });
+  },
+
+  login: async (email: string, password: string) => {
+    const user = await authRepository.findByEmail(email);
+
+    if (!user || !user.password) {
+      throw new AppError("Invalid credentials", 401);
+    }
+
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) throw new AppError("Invalid credentials", 401);
+
+    const accessToken = jwt.sign(
+      { userId: user.id, role: user.role },
+      env.JWT_SECRET,
+      { expiresIn: "15m" }
+    );
+
+    const refreshToken = jwt.sign(
+      { userId: user.id },
+      env.REFRESH_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    await authRepository.saveRefreshToken(user.id, refreshToken);
+
+    return { accessToken, refreshToken };
+  },
+
+  logout: async (userId: number) => {
+    const user = await authRepository.findById(userId);
+    if (!user) throw new AppError("User not found", 404);
+
+    await authRepository.logout(userId);
+    return { message: "Logged out successfully" };
+  },
+
+  refresh: async (token: string) => {
+    try {
+      const decoded = jwt.verify(token, env.REFRESH_SECRET) as any;
+      const user = await authRepository.findById(decoded.userId);
+
+      if (!user || user.refreshToken !== token) {
+        throw new AppError("Invalid refresh token", 401);
+      }
+
+      const newAccessToken = jwt.sign(
+        { userId: user.id, role: user.role },
+        env.JWT_SECRET,
+        { expiresIn: "15m" }
+      );
+
+      return { accessToken: newAccessToken };
+    } catch {
+      throw new AppError("Invalid refresh token", 401);
+    }
+  },
+};
+
+
+// ===== C:\Users\User\Desktop\CRM\src\modules\auth\auth.utils.ts =====
+
+
+
+// ===== C:\Users\User\Desktop\CRM\src\modules\auth\auth.validation.ts =====
+
+
+
+// ===== C:\Users\User\Desktop\CRM\src\modules\orders\order.controller.ts =====
+import { Response } from "express";
+import { orderService } from "./order.service";
+import { asyncHandler } from "core/utils/asyncHandler";
+import { AuthRequest } from "core/middlewares/auth.middleware";
+
+export const orderController = {
+  createOrder: asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { productIds } = req.body;
+
+    const order = await orderService.createOrder(req.userId!, productIds);
+
+    res.status(201).json(order);
+  }),
+
+  getOrders: asyncHandler(async (req: AuthRequest, res: Response) => {
+    const orders = await orderService.getOrders();
+    res.status(200).json(orders);
+  }),
+
+  getOrderById: asyncHandler(async (req: AuthRequest, res: Response) => {
+    const order = await orderService.getOrderById(
+      Number(req.params.id),
+      req.userId!,
+      req.role!
+    );
+
+    res.status(200).json(order);
+  }),
+
+  delete: asyncHandler(async (req: AuthRequest, res: Response) => {
+    const order = await orderService.deleteOrder(Number(req.params.id));
+
+    res.status(200).json(order);
+  }),
+
+  getMyOrder: asyncHandler(async (req: AuthRequest, res: Response) => {
+    const orders = await orderService.getMyOrders(req.userId!);
+    res.status(200).json(orders);
+  }),
+};
+
+
+
+// ===== C:\Users\User\Desktop\CRM\src\modules\orders\order.model.ts =====
+
+
+
+// ===== C:\Users\User\Desktop\CRM\src\modules\orders\order.repository.ts =====
+import {prisma} from '@config/db'
+
+
+export const orderRepository = {
+  
+  create : (userId : number , productId : number[]) => {
+    return prisma.order.create({
+      data : {
+        userId,
+        products : {
+          create : productId.map(id => ({
+            productId : id 
+          }))
+        }
+      },
+      include : {
+        products : {
+          include : {product : true}
+        }
+      }
+    })
+  },
+
+  findAll : () => {
+    return prisma.order.findMany({
+      include : {
+        products : {
+          include : {
+            product : true
+          }
+        },
+        user : true
+      }
+    })
+  },
+
+  findById : (id : number) => {
+    return prisma.order.findUnique({
+      where : {id},
+
+      include : {
+        products : {
+          include: {product : true}
+        }
+      }
+    })
+  },
+
+  findUserId : (userId : number) => {
+    return prisma.order.findMany ({
+      where : {userId},
+
+      include : {
+        products : {
+          include : {product : true}
+        }
+      }
+
+    })
+  },
+
+  delete : (id : number) => {
+    return prisma.order.delete ({
+      where : {id}
+    })
+  }
+}
+
+
+// ===== C:\Users\User\Desktop\CRM\src\modules\orders\order.routes.ts =====
+import { Router } from "express";
+import { orderController } from "./order.controller";
+import { authMiddleware } from "core/middlewares/auth.middleware";
+import { roles } from "core/middlewares/roles.middleware";
+import { validate } from "core/middlewares/validate.middleware";
+import { createOrderSchema, orderIdSchema } from "./order.validators";
+
+const router = Router();
+
+router.post("/", authMiddleware, validate(createOrderSchema), orderController.createOrder);
+router.get("/", authMiddleware, roles("admin"), orderController.getOrders);
+router.get("/my", authMiddleware, orderController.getMyOrder);
+router.get("/:id", authMiddleware, validate(orderIdSchema), orderController.getOrderById);
+router.delete("/:id", authMiddleware, roles("admin"), orderController.delete);
+
+export default router;
+
+
+// ===== C:\Users\User\Desktop\CRM\src\modules\orders\order.service.ts =====
+import { orderRepository } from './order.repository';
+import { AppError } from 'core/errors/app-error';
+
+export const orderService = {
+
+  createOrder: async (userId: number, productIds: number[]) => {
+    if (!userId || !productIds.length) {
+      throw new AppError('userId and products required', 400);
+    }
+    return orderRepository.create(userId, productIds);
+  },
+
+  getOrders: async () => {
+    return orderRepository.findAll();
+  },
+
+  getOrderById: async (orderId: number, userId: number, role: string) => {
+    const order = await orderRepository.findById(orderId);
+
+    if (!order) throw new AppError('Order not found', 404);
+
+    if (role !== 'admin' && order.userId !== userId) {
+      throw new AppError('Forbidden', 403);
+    }
+
+    return order;
+  },
+
+  deleteOrder: async (id: number) => {
+    const order = await orderRepository.findById(id);
+    if (!order) throw new AppError('Order not found', 404);
+
+    return orderRepository.delete(id);
+  },
+
+  getMyOrders: async (userId: number) => {
+    return orderRepository.findUserId(userId);
+  },
+};
+
+
+// ===== C:\Users\User\Desktop\CRM\src\modules\orders\order.validators.ts =====
+import { z } from "zod";
+
+export const createOrderSchema = z.object({
+  body: z.object({
+    productIds: z.array(z.number().int().positive()),
+  }),
+});
+
+export const orderIdSchema = z.object({
+  params: z.object({
+    id: z.string().regex(/^\d+$/),
+  }),
+});
+
+
+// ===== C:\Users\User\Desktop\CRM\src\modules\products\product.controller.ts =====
+import { Request, Response } from "express";
+import { asyncHandler } from "core/utils/asyncHandler";
+import { productService } from "./product.service";
+
+export const productController = {
+  create: asyncHandler(async (req: Request, res: Response) => {
+    const product = await productService.create(req.body.name, req.body.price);
+
+    res.status(201).json({ product });
+  }),
+
+  getAll: asyncHandler(async (req: Request, res: Response) => {
+    const products = await productService.getAll();
+    res.status(200).json({ products });
+  }),
+
+  getById: asyncHandler(async (req: Request, res: Response) => {
+    const product = await productService.getById(Number(req.params.id));
+    res.status(200).json({ product });
+  }),
+
+  update: asyncHandler(async (req: Request, res: Response) => {
+    const product = await productService.update(
+      Number(req.params.id),
+      req.body
+    );
+    res.status(200).json({ product });
+  }),
+
+  delete: asyncHandler(async (req: Request, res: Response) => {
+    const product = await productService.delete(Number(req.params.id));
+    res.status(200).json({ product });
+  }),
+};
+
+
+
+// ===== C:\Users\User\Desktop\CRM\src\modules\products\product.model.ts =====
+
+
+
+// ===== C:\Users\User\Desktop\CRM\src\modules\products\product.repository.ts =====
+import {prisma} from '@config/db'
+
+
+export const productRepository = {
+    create : (data : { name : string , price : number}) => {
+        return prisma.product.create({ data })
+    },
+
+    findAll : () => {
+        return prisma.product.findMany()
+    },
+
+    findById : (id : number) => {
+        return prisma.product.findUnique({
+            where :{id}
+        })
+    },
+
+    update : (id : number , data : {name? : string , price? : number}) => {
+        return prisma.product.update({
+            where : {id},
+            data
+        })
+    },
+
+    delete : (id : number) => {
+        return prisma.product.delete({
+            where : {id}
+        })
+    }
+}
+
+
+// ===== C:\Users\User\Desktop\CRM\src\modules\products\product.routes.ts =====
+import { Router } from "express";
+import { productController } from "./product.controller";
+import { authMiddleware } from "core/middlewares/auth.middleware";
+import { roles } from "core/middlewares/roles.middleware";
+import { validate } from "core/middlewares/validate.middleware";
+
+import { createProductSchema } from "./product.validators";
+
+const router = Router();
+
+router.get("/", authMiddleware, productController.getAll);
+
+router.get("/:id", authMiddleware, productController.getById);
+
+router.post(
+  "/",
+  authMiddleware,
+  roles("admin"),
+  validate(createProductSchema),
+  productController.create
+);
+
+router.put("/:id", authMiddleware, roles("admin"), productController.update);
+
+router.delete("/:id", authMiddleware, roles("admin"), productController.delete);
+
+export default router;
+
+
+
+// ===== C:\Users\User\Desktop\CRM\src\modules\products\product.service.ts =====
+import { productRepository } from "./product.repository";
+import { AppError } from "core/errors/app-error";
+
+export const productService = {
+  create: async (name: string, price: number) => {
+    return productRepository.create({ name, price });
+  },
+
+  getAll: async () => {
+    return productRepository.findAll();
+  },
+
+  getById: async (id: number) => {
+    const product = await productRepository.findById(id);
+
+    if (!product) {
+      throw new AppError("Product not found", 404);
+    }
+
+    return product;
+  },
+
+  update: async (id: number, data: any) => {
+    return productRepository.update(id, data);
+  },
+
+  delete: async (id: number) => {
+    return productRepository.delete(id);
+  },
+};
+
+
+
+// ===== C:\Users\User\Desktop\CRM\src\modules\products\product.validators.ts =====
+import { z } from "zod";
+
+export const createProductSchema = z.object({
+  body: z.object({
+    name: z.string().min(2),
+    price: z.number().positive(),
+  }),
+});
+
+export const updateProductSchema = z.object({
+  params: z.object({
+    id: z.string().regex(/^\d+$/),
+  }),
+  body: z.object({
+    name: z.string().min(2).optional(),
+    price: z.number().positive().optional(),
+  }),
+});
+
+
+// ===== C:\Users\User\Desktop\CRM\src\modules\users\user.controller.ts =====
+import { Response } from "express";
+import { userService } from "./user.service";
+import { asyncHandler } from "core/utils/asyncHandler";
+import { AuthRequest } from "core/middlewares/auth.middleware";
+
+export const userController = {
+  getAll: asyncHandler(async (req: AuthRequest, res: Response) => {
+    const users = await userService.getAll();
+
+    res.status(200).json({
+      success: true,
+      data: users,
+    });
+  }),
+
+  delete: asyncHandler(async (req: AuthRequest, res: Response) => {
+    const user = await userService.delete(Number(req.params.id));
+
+    res.status(200).json({
+      success: true,
+      data: user,
+    });
+  }),
+
+  getById: asyncHandler(async (req: AuthRequest, res: Response) => {
+    const user = await userService.getById(Number(req.params.id));
+
+    res.status(200).json({ user });
+  }),
+
+  getMe: asyncHandler(async (req: AuthRequest, res: Response) => {
+    const user = await userService.getById(req.userId!);
+
+    res.status(200).json({
+      success: true,
+      data: user,
+    });
+  }),
+
+  updateMe: asyncHandler(async (req: AuthRequest, res: Response) => {
+    const user = await userService.updateMe(req.userId!, req.body);
+
+    res.status(200).json({
+      success: true,
+      data: user,
+    });
+  }),
+};
+
+
+
+// ===== C:\Users\User\Desktop\CRM\src\modules\users\user.model.ts =====
+
+
+
+// ===== C:\Users\User\Desktop\CRM\src\modules\users\user.repository.ts =====
+import { prisma } from "@config/db";
+
+export const userRepository = {
+  findAll: () => {
+    return prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true,
+      },
+    });
+  },
+
+  findById: (id: number) => {
+    return prisma.user.findUnique({
+      where: { id },
+    });
+  },
+
+  delete : (id : number) => {
+    return prisma.user.delete({
+      where : {id}
+    })
+  }, 
+
+  update : (id : number , data : {name? : string , email? : string ,password? : string }) => {
+    return prisma.user.update({
+      where : {id},
+      data
+    })
+  },
+
+};
+
+
+// ===== C:\Users\User\Desktop\CRM\src\modules\users\user.routes.ts =====
+import { Router } from "express";
+import { userController } from "./user.controller";
+import { authMiddleware } from "core/middlewares/auth.middleware";
+import { roles } from "core/middlewares/roles.middleware";
+import { validate } from "core/middlewares/validate.middleware";
+import { updateMeSchema, userIdSchema } from "./user.validation";
+
+const router = Router();
+
+
+router.get("/me", authMiddleware, userController.getMe);
+router.patch("/me", authMiddleware, validate(updateMeSchema), userController.updateMe);
+
+
+router.get("/", authMiddleware, roles("admin"), userController.getAll);
+router.get("/:id", authMiddleware, roles("admin"), validate(userIdSchema), userController.getById);
+router.delete("/:id", authMiddleware, roles("admin"), userController.delete);
+
+export default router;
+
+
+// ===== C:\Users\User\Desktop\CRM\src\modules\users\user.service.ts =====
+import { userRepository } from "./user.repository";
+import { AppError } from "core/errors/app-error";
+
+export const userService = {
+  getAll: async () => {
+    return userRepository.findAll();
+  },
+
+  getById: async (id: number) => {
+    const user = await userRepository.findById(id);
+
+    if (!user) {
+      throw new AppError("User not found", 404);
+    }
+
+    return user;
+  },
+
+  
+  updateMe: async (userId: number, data: any) => {
+    const allowedData = {
+      name: data.name,
+      email: data.email,
+    };
+
+    return userRepository.update(userId, allowedData);
+  },
+
+  
+  delete: async (id: number) => {
+    const user = await userRepository.findById(id);
+
+    if (!user) {
+      throw new AppError("User not found", 404);
+    }
+
+    return userRepository.delete(id);
+  },
+};
+
+
+
+// ===== C:\Users\User\Desktop\CRM\src\modules\users\user.validation.ts =====
+import { z } from "zod";
+
+export const updateMeSchema = z.object({
+  body: z.object({
+    name: z.string().min(2).optional(),
+    email: z.string().email().optional(),
+    password: z.string().min(6).optional(),
+  }),
+});
+
+export const userIdSchema = z.object({
+  params: z.object({
+    id: z.string().regex(/^\d+$/, "Invalid user id"),
+  }),
+});
+
+
+// ===== C:\Users\User\Desktop\CRM\src\tests\common\auth.test.ts =====
+import request from 'supertest';
+import app from '../../app';
+import { prisma } from '../../config/db';
+
+const testUser = {
+  name: 'Test User',
+  email: 'test@test.com',
+  password: '123456',
+};
+
+beforeEach(async () => {
+  await prisma.user.deleteMany({ where: { email: testUser.email } });
+});
+    
+afterAll(async () => {
+  await prisma.$disconnect();
+});
+
+describe('POST /auth/signup', () => {
+  it('РґРѕР»Р¶РµРЅ СЃРѕР·РґР°С‚СЊ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ Рё РІРµСЂРЅСѓС‚СЊ 201', async () => {
+    const res = await request(app)
+      .post('/auth/signup')
+      .send(testUser);
+
+    expect(res.status).toBe(201);
+    expect(res.body).toHaveProperty('id');
+    expect(res.body.email).toBe(testUser.email);
+  });
+
+  it('РґРѕР»Р¶РµРЅ РІРµСЂРЅСѓС‚СЊ 409 РµСЃР»Рё email СѓР¶Рµ Р·Р°РЅСЏС‚', async () => {
+    await request(app).post('/auth/signup').send(testUser);
+
+    const res = await request(app)
+      .post('/auth/signup')
+      .send(testUser);
+
+    expect(res.status).toBe(409);
+  });
+});
+
+describe('POST /auth/login', () => {
+  it('РґРѕР»Р¶РµРЅ РІРµСЂРЅСѓС‚СЊ accessToken Рё refreshToken', async () => {
+    await request(app).post('/auth/signup').send(testUser);
+
+    const res = await request(app)
+      .post('/auth/login')
+      .send({ email: testUser.email, password: testUser.password });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('accessToken');
+    expect(res.body).toHaveProperty('refreshToken');
+  });
+
+  it('РґРѕР»Р¶РµРЅ РІРµСЂРЅСѓС‚СЊ 401 РїСЂРё РЅРµРІРµСЂРЅРѕРј РїР°СЂРѕР»Рµ', async () => {
+    await request(app).post('/auth/signup').send(testUser);
+
+    const res = await request(app)
+      .post('/auth/login')
+      .send({ email: testUser.email, password: 'wrongpassword' });
+
+    expect(res.status).toBe(401);
+  });
+
+  it('РґРѕР»Р¶РµРЅ РІРµСЂРЅСѓС‚СЊ 401 РµСЃР»Рё РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚', async () => {
+    const res = await request(app)
+      .post('/auth/login')
+      .send({ email: 'nobody@test.com', password: '123456' });
+
+    expect(res.status).toBe(401);
+  });
+});
+
+describe('POST /auth/logout', () => {
+  it('РґРѕР»Р¶РµРЅ СЂР°Р·Р»РѕРіРёРЅРёС‚СЊ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ', async () => {
+    await request(app).post('/auth/signup').send(testUser);
+
+    const loginRes = await request(app)
+      .post('/auth/login')
+      .send({ email: testUser.email, password: testUser.password });
+
+    const { accessToken } = loginRes.body;
+
+    const res = await request(app)
+      .post('/auth/logout')
+      .set('Authorization', `Bearer ${accessToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('Logged out successfully');
+  });
+
+  it('РґРѕР»Р¶РµРЅ РІРµСЂРЅСѓС‚СЊ 401 Р±РµР· С‚РѕРєРµРЅР°', async () => {
+    const res = await request(app).post('/auth/logout');
+    expect(res.status).toBe(401);
+  });
+});
+
+
+// ===== C:\Users\User\Desktop\CRM\src\tests\common\orders.test.ts =====
+import request from 'supertest';
+import app from '../../app';
+import { prisma } from '../../config/db';
+
+let adminToken: string;
+let userToken: string;
+let otherUserToken: string;
+let productId: number;
+
+beforeAll(async () => {
+  await prisma.orderProduct.deleteMany();
+  await prisma.order.deleteMany();
+  await prisma.product.deleteMany();
+  await prisma.user.deleteMany({
+    where: { email: { in: ['admin@orders.com', 'user@orders.com', 'other@orders.com'] } }
+  });
+
+  const bcrypt = await import('bcrypt');
+  const hashed = await bcrypt.hash('123456', 10);
+
+  await prisma.user.create({
+    data: { name: 'Admin', email: 'admin@orders.com', password: hashed, role: 'admin' }
+  });
+  await prisma.user.create({
+    data: { name: 'User', email: 'user@orders.com', password: hashed, role: 'user' }
+  });
+  await prisma.user.create({
+    data: { name: 'Other', email: 'other@orders.com', password: hashed, role: 'user' }
+  });
+
+  const adminRes = await request(app)
+    .post('/auth/login')
+    .send({ email: 'admin@orders.com', password: '123456' });
+
+  const userRes = await request(app)
+    .post('/auth/login')
+    .send({ email: 'user@orders.com', password: '123456' });
+
+  const otherRes = await request(app)
+    .post('/auth/login')
+    .send({ email: 'other@orders.com', password: '123456' });
+
+  adminToken = adminRes.body.accessToken;
+  userToken = userRes.body.accessToken;
+  otherUserToken = otherRes.body.accessToken;
+
+  // РЎРѕР·РґР°С‘Рј РїСЂРѕРґСѓРєС‚ РґР»СЏ С‚РµСЃС‚РѕРІ Р·Р°РєР°Р·РѕРІ
+  const product = await prisma.product.create({
+    data: { name: 'Test Product', price: 100 }
+  });
+  productId = product.id;
+});
+
+beforeEach(async () => {
+  await prisma.orderProduct.deleteMany();
+  await prisma.order.deleteMany();
+});
+
+afterAll(async () => {
+  await prisma.orderProduct.deleteMany();
+  await prisma.order.deleteMany();
+  await prisma.product.deleteMany();
+  await prisma.user.deleteMany({
+    where: { email: { in: ['admin@orders.com', 'user@orders.com', 'other@orders.com'] } }
+  });
+  await prisma.$disconnect();
+});
+
+describe('POST /orders', () => {
+  it('РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РґРѕР»Р¶РµРЅ СЃРѕР·РґР°С‚СЊ Р·Р°РєР°Р· Рё РїРѕР»СѓС‡РёС‚СЊ 201', async () => {
+    const res = await request(app)
+      .post('/orders')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ productIds: [productId] });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toHaveProperty('id');
+  });
+
+  it('РґРѕР»Р¶РµРЅ РІРµСЂРЅСѓС‚СЊ 400 РµСЃР»Рё productIds РїСѓСЃС‚РѕР№', async () => {
+    const res = await request(app)
+      .post('/orders')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ productIds: [] });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('РґРѕР»Р¶РµРЅ РІРµСЂРЅСѓС‚СЊ 401 Р±РµР· С‚РѕРєРµРЅР°', async () => {
+    const res = await request(app)
+      .post('/orders')
+      .send({ productIds: [productId] });
+
+    expect(res.status).toBe(401);
+  });
+});
+
+describe('GET /orders', () => {
+  it('Р°РґРјРёРЅ РґРѕР»Р¶РµРЅ РІРёРґРµС‚СЊ РІСЃРµ Р·Р°РєР°Р·С‹', async () => {
+    await request(app)
+      .post('/orders')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ productIds: [productId] });
+
+    const res = await request(app)
+      .get('/orders')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.length).toBeGreaterThan(0);
+  });
+
+  it('РѕР±С‹С‡РЅС‹Р№ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РґРѕР»Р¶РµРЅ РїРѕР»СѓС‡РёС‚СЊ 403', async () => {
+    const res = await request(app)
+      .get('/orders')
+      .set('Authorization', `Bearer ${userToken}`);
+
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('GET /orders/my', () => {
+  it('РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РІРёРґРёС‚ С‚РѕР»СЊРєРѕ СЃРІРѕРё Р·Р°РєР°Р·С‹', async () => {
+    await request(app)
+      .post('/orders')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ productIds: [productId] });
+
+    // Р”СЂСѓРіРѕР№ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ С‚РѕР¶Рµ СЃРѕР·РґР°С‘С‚ Р·Р°РєР°Р·
+    await request(app)
+      .post('/orders')
+      .set('Authorization', `Bearer ${otherUserToken}`)
+      .send({ productIds: [productId] });
+
+    const res = await request(app)
+      .get('/orders/my')
+      .set('Authorization', `Bearer ${userToken}`);
+
+    expect(res.status).toBe(200);
+    // Р’РёРґРёС‚ С‚РѕР»СЊРєРѕ СЃРІРѕР№ РѕРґРёРЅ Р·Р°РєР°Р·, РЅРµ С‡СѓР¶РѕР№
+    expect(res.body).toHaveLength(1);
+  });
+});
+
+describe('GET /orders/:id', () => {
+  it('РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РІРёРґРёС‚ СЃРІРѕР№ Р·Р°РєР°Р·', async () => {
+    const created = await request(app)
+      .post('/orders')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ productIds: [productId] });
+
+    const id = created.body.id;
+
+    const res = await request(app)
+      .get(`/orders/${id}`)
+      .set('Authorization', `Bearer ${userToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe(id);
+  });
+
+  it('РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ РІРёРґРёС‚ С‡СѓР¶РѕР№ Р·Р°РєР°Р· Рё РїРѕР»СѓС‡Р°РµС‚ 403', async () => {
+    const created = await request(app)
+      .post('/orders')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ productIds: [productId] });
+
+    const id = created.body.id;
+
+    const res = await request(app)
+      .get(`/orders/${id}`)
+      .set('Authorization', `Bearer ${otherUserToken}`);
+
+    expect(res.status).toBe(403);
+  });
+
+  it('РґРѕР»Р¶РµРЅ РІРµСЂРЅСѓС‚СЊ 404 РµСЃР»Рё Р·Р°РєР°Р· РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚', async () => {
+    const res = await request(app)
+      .get('/orders/99999')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('DELETE /orders/:id', () => {
+  it('Р°РґРјРёРЅ РґРѕР»Р¶РµРЅ СѓРґР°Р»РёС‚СЊ Р·Р°РєР°Р·', async () => {
+    const created = await request(app)
+      .post('/orders')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ productIds: [productId] });
+
+    const id = created.body.id;
+
+    const res = await request(app)
+      .delete(`/orders/${id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+  });
+
+  it('РѕР±С‹С‡РЅС‹Р№ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ РјРѕР¶РµС‚ СѓРґР°Р»РёС‚СЊ Р·Р°РєР°Р·', async () => {
+    const created = await request(app)
+      .post('/orders')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ productIds: [productId] });
+
+    const id = created.body.id;
+
+    const res = await request(app)
+      .delete(`/orders/${id}`)
+      .set('Authorization', `Bearer ${userToken}`);
+
+    expect(res.status).toBe(403);
+  });
+});
+
+
+// ===== C:\Users\User\Desktop\CRM\src\tests\common\products.test.ts =====
+import request from 'supertest';
+import app from '../../app';
+import { prisma } from '../../config/db';
+
+let adminToken: string;
+let userToken: string;
+
+beforeAll(async () => {
+  await prisma.user.deleteMany({
+    where: { email: { in: ['admin@test.com', 'user@test.com'] } }
+  });
+
+  // РЎРѕР·РґР°С‘Рј Р°РґРјРёРЅР° РЅР°РїСЂСЏРјСѓСЋ С‡РµСЂРµР· prisma РїРѕС‚РѕРјСѓ С‡С‚Рѕ signup РІСЃРµРіРґР° СЃРѕР·РґР°С‘С‚ role: 'user'
+  const bcrypt = await import('bcrypt');
+  const hashed = await bcrypt.hash('123456', 10);
+
+  await prisma.user.create({
+    data: { name: 'Admin', email: 'admin@test.com', password: hashed, role: 'admin' }
+  });
+
+  await prisma.user.create({
+    data: { name: 'User', email: 'user@test.com', password: hashed, role: 'user' }
+  });
+
+  const adminRes = await request(app)
+    .post('/auth/login')
+    .send({ email: 'admin@test.com', password: '123456' });
+
+  const userRes = await request(app)
+    .post('/auth/login')
+    .send({ email: 'user@test.com', password: '123456' });
+
+  adminToken = adminRes.body.accessToken;
+  userToken = userRes.body.accessToken;
+});
+
+beforeEach(async () => {
+  await prisma.orderProduct.deleteMany();
+  await prisma.order.deleteMany();
+  await prisma.product.deleteMany();
+});
+
+afterAll(async () => {
+  await prisma.orderProduct.deleteMany();
+  await prisma.order.deleteMany();
+  await prisma.product.deleteMany();
+  await prisma.user.deleteMany({
+    where: { email: { in: ['admin@test.com', 'user@test.com'] } }
+  });
+  await prisma.$disconnect();
+});
+
+describe('POST /products', () => {
+  it('Р°РґРјРёРЅ РґРѕР»Р¶РµРЅ СЃРѕР·РґР°С‚СЊ РїСЂРѕРґСѓРєС‚ Рё РїРѕР»СѓС‡РёС‚СЊ 201', async () => {
+    const res = await request(app)
+      .post('/products')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Laptop', price: 1200 });
+
+    expect(res.status).toBe(201);
+    expect(res.body.product).toHaveProperty('id');
+    expect(res.body.product.name).toBe('Laptop');
+  });
+
+  it('РѕР±С‹С‡РЅС‹Р№ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РґРѕР»Р¶РµРЅ РїРѕР»СѓС‡РёС‚СЊ 403', async () => {
+    const res = await request(app)
+      .post('/products')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ name: 'Laptop', price: 1200 });
+
+    expect(res.status).toBe(403);
+  });
+
+  it('РґРѕР»Р¶РµРЅ РІРµСЂРЅСѓС‚СЊ 400 РµСЃР»Рё name РЅРµ РїРµСЂРµРґР°РЅ', async () => {
+    const res = await request(app)
+      .post('/products')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ price: 1200 });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('РґРѕР»Р¶РµРЅ РІРµСЂРЅСѓС‚СЊ 401 Р±РµР· С‚РѕРєРµРЅР°', async () => {
+    const res = await request(app)
+      .post('/products')
+      .send({ name: 'Laptop', price: 1200 });
+
+    expect(res.status).toBe(401);
+  });
+});
+
+describe('GET /products', () => {
+  it('РґРѕР»Р¶РµРЅ РІРµСЂРЅСѓС‚СЊ СЃРїРёСЃРѕРє РїСЂРѕРґСѓРєС‚РѕРІ', async () => {
+    await request(app)
+      .post('/products')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Laptop', price: 1200 });
+
+    const res = await request(app)
+      .get('/products')
+      .set('Authorization', `Bearer ${userToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.products).toHaveLength(1);
+  });
+});
+
+describe('GET /products/:id', () => {
+  it('РґРѕР»Р¶РµРЅ РІРµСЂРЅСѓС‚СЊ РїСЂРѕРґСѓРєС‚ РїРѕ id', async () => {
+    const created = await request(app)
+      .post('/products')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Phone', price: 800 });
+
+    const id = created.body.product.id;
+
+    const res = await request(app)
+      .get(`/products/${id}`)
+      .set('Authorization', `Bearer ${userToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.product.id).toBe(id);
+  });
+
+  it('РґРѕР»Р¶РµРЅ РІРµСЂРЅСѓС‚СЊ 404 РµСЃР»Рё РїСЂРѕРґСѓРєС‚ РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚', async () => {
+    const res = await request(app)
+      .get('/products/99999')
+      .set('Authorization', `Bearer ${userToken}`);
+
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('PUT /products/:id', () => {
+  it('Р°РґРјРёРЅ РґРѕР»Р¶РµРЅ РѕР±РЅРѕРІРёС‚СЊ РїСЂРѕРґСѓРєС‚', async () => {
+    const created = await request(app)
+      .post('/products')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Old Name', price: 100 });
+
+    const id = created.body.product.id;
+
+    const res = await request(app)
+      .put(`/products/${id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'New Name' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.product.name).toBe('New Name');
+  });
+
+  it('РѕР±С‹С‡РЅС‹Р№ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РґРѕР»Р¶РµРЅ РїРѕР»СѓС‡РёС‚СЊ 403', async () => {
+    const created = await request(app)
+      .post('/products')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Laptop', price: 1200 });
+
+    const id = created.body.product.id;
+
+    const res = await request(app)
+      .put(`/products/${id}`)
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ name: 'Hacked' });
+
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('DELETE /products/:id', () => {
+  it('Р°РґРјРёРЅ РґРѕР»Р¶РµРЅ СѓРґР°Р»РёС‚СЊ РїСЂРѕРґСѓРєС‚', async () => {
+    const created = await request(app)
+      .post('/products')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'ToDelete', price: 50 });
+
+    const id = created.body.product.id;
+
+    const res = await request(app)
+      .delete(`/products/${id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+  });
+
+  it('РѕР±С‹С‡РЅС‹Р№ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РґРѕР»Р¶РµРЅ РїРѕР»СѓС‡РёС‚СЊ 403', async () => {
+    const created = await request(app)
+      .post('/products')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Laptop', price: 1200 });
+
+    const id = created.body.product.id;
+
+    const res = await request(app)
+      .delete(`/products/${id}`)
+      .set('Authorization', `Bearer ${userToken}`);
+
+    expect(res.status).toBe(403);
+  });
+});
+
+
+// ===== C:\Users\User\Desktop\CRM\src\tests\common\users.test.ts =====
+import request from 'supertest';
+import app from '../../app';
+import { prisma } from '../../config/db';
+
+let adminToken: string;
+let userToken: string;
+let userId: number;
+
+beforeAll(async () => {
+  await prisma.user.deleteMany({
+    where: { email: { in: ['admin@users.com', 'user@users.com'] } }
+  });
+
+  const bcrypt = await import('bcrypt');
+  const hashed = await bcrypt.hash('123456', 10);
+
+  await prisma.user.create({
+    data: { name: 'Admin', email: 'admin@users.com', password: hashed, role: 'admin' }
+  });
+
+  const user = await prisma.user.create({
+    data: { name: 'User', email: 'user@users.com', password: hashed, role: 'user' }
+  });
+
+  userId = user.id;
+
+  const adminRes = await request(app)
+    .post('/auth/login')
+    .send({ email: 'admin@users.com', password: '123456' });
+
+  const userRes = await request(app)
+    .post('/auth/login')
+    .send({ email: 'user@users.com', password: '123456' });
+
+  adminToken = adminRes.body.accessToken;
+  userToken = userRes.body.accessToken;
+});
+
+afterAll(async () => {
+  await prisma.user.deleteMany({
+    where: { email: { in: ['admin@users.com', 'user@users.com'] } }
+  });
+  await prisma.$disconnect();
+});
+
+describe('GET /users', () => {
+  it('Р°РґРјРёРЅ РґРѕР»Р¶РµРЅ РїРѕР»СѓС‡РёС‚СЊ СЃРїРёСЃРѕРє РІСЃРµС… РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№', async () => {
+    const res = await request(app)
+      .get('/users')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(Array.isArray(res.body.data)).toBe(true);
+  });
+
+  it('РѕР±С‹С‡РЅС‹Р№ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РґРѕР»Р¶РµРЅ РїРѕР»СѓС‡РёС‚СЊ 403', async () => {
+    const res = await request(app)
+      .get('/users')
+      .set('Authorization', `Bearer ${userToken}`);
+
+    expect(res.status).toBe(403);
+  });
+
+  it('Р±РµР· С‚РѕРєРµРЅР° РґРѕР»Р¶РµРЅ РїРѕР»СѓС‡РёС‚СЊ 401', async () => {
+    const res = await request(app).get('/users');
+    expect(res.status).toBe(401);
+  });
+});
+
+describe('GET /users/me', () => {
+  it('РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РґРѕР»Р¶РµРЅ РїРѕР»СѓС‡РёС‚СЊ СЃРІРѕРё РґР°РЅРЅС‹Рµ', async () => {
+    const res = await request(app)
+      .get('/users/me')
+      .set('Authorization', `Bearer ${userToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.email).toBe('user@users.com');
+  });
+
+  it('Р±РµР· С‚РѕРєРµРЅР° РґРѕР»Р¶РµРЅ РїРѕР»СѓС‡РёС‚СЊ 401', async () => {
+    const res = await request(app).get('/users/me');
+    expect(res.status).toBe(401);
+  });
+});
+
+describe('PATCH /users/me', () => {
+  it('РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РґРѕР»Р¶РµРЅ РѕР±РЅРѕРІРёС‚СЊ СЃРІРѕС‘ РёРјСЏ', async () => {
+    const res = await request(app)
+      .patch('/users/me')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ name: 'Updated Name' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.name).toBe('Updated Name');
+  });
+
+  it('РґРѕР»Р¶РµРЅ РІРµСЂРЅСѓС‚СЊ 400 РµСЃР»Рё name СЃР»РёС€РєРѕРј РєРѕСЂРѕС‚РєРёР№', async () => {
+    const res = await request(app)
+      .patch('/users/me')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ name: 'A' });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('Р±РµР· С‚РѕРєРµРЅР° РґРѕР»Р¶РµРЅ РїРѕР»СѓС‡РёС‚СЊ 401', async () => {
+    const res = await request(app)
+      .patch('/users/me')
+      .send({ name: 'Test' });
+
+    expect(res.status).toBe(401);
+  });
+});
+
+describe('GET /users/:id', () => {
+  it('Р°РґРјРёРЅ РґРѕР»Р¶РµРЅ РїРѕР»СѓС‡РёС‚СЊ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РїРѕ id', async () => {
+    const res = await request(app)
+      .get(`/users/${userId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.id).toBe(userId);
+  });
+
+  it('РґРѕР»Р¶РµРЅ РІРµСЂРЅСѓС‚СЊ 404 РµСЃР»Рё РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚', async () => {
+    const res = await request(app)
+      .get('/users/99999')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it('РѕР±С‹С‡РЅС‹Р№ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РґРѕР»Р¶РµРЅ РїРѕР»СѓС‡РёС‚СЊ 403', async () => {
+    const res = await request(app)
+      .get(`/users/${userId}`)
+      .set('Authorization', `Bearer ${userToken}`);
+
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('DELETE /users/:id', () => {
+  it('РѕР±С‹С‡РЅС‹Р№ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ РјРѕР¶РµС‚ СѓРґР°Р»РёС‚СЊ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ', async () => {
+    const res = await request(app)
+      .delete(`/users/${userId}`)
+      .set('Authorization', `Bearer ${userToken}`);
+
+    expect(res.status).toBe(403);
+  });
+
+  it('Р±РµР· С‚РѕРєРµРЅР° РґРѕР»Р¶РµРЅ РїРѕР»СѓС‡РёС‚СЊ 401', async () => {
+    const res = await request(app)
+      .delete(`/users/${userId}`);
+
+    expect(res.status).toBe(401);
+  });
+});
+
+
+// ===== C:\Users\User\Desktop\CRM\src\app.ts =====
+import express from "express";
+import helmet from "helmet";
+import cors from "cors";
+import userRoutes from "@modules/users/user.routes";
+import productRoutes from "@modules/products/product.routes";
+import orderRoutes from "@modules/orders/order.routes";
+import authRoutes from "@modules/auth/auth.routes";
+import { errorMiddleware } from "core/errors/error.middleware";
+import swaggerUi from 'swagger-ui-express';
+import { swaggerDocument } from '@config/swagger';
+
+const app = express();
+
+app.use(helmet());
+app.use(cors());
+app.use(express.json());
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
+app.use("/users", userRoutes);
+app.use("/products", productRoutes);
+app.use("/orders", orderRoutes);
+app.use("/auth", authRoutes);
+
+app.use(errorMiddleware);
+
+export default app;
+
+
+// ===== C:\Users\User\Desktop\CRM\src\server.ts =====
+import app from "./app";
+import { env } from "@config/env";
+
+app.listen(env.PORT, () => {
+  console.log(`Server running on port ${env.PORT}`);
+});
+
+
+// ===== C:\Users\User\Desktop\CRM\jest.config.ts =====
+import type { Config } from 'jest';
+
+const config: Config = {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  moduleNameMapper: {
+    '^@config/(.*)$': '<rootDir>/src/config/$1',
+    '^@modules/(.*)$': '<rootDir>/src/modules/$1',
+    '^core/(.*)$': '<rootDir>/src/core/$1',
+  },
+  testMatch: ['**/tests/**/*.test.ts'],
+};
+
+export default config;
+
+
+// ===== C:\Users\User\Desktop\CRM\prisma.config.ts =====
+
+import { PrismaClient } from '@prisma/client';
+
+export const prisma = new PrismaClient();
+
+
