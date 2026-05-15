@@ -15,4 +15,5 @@ export const env = {
   REFRESH_SECRET: required('REFRESH_SECRET'),
   RESEND_API_KEY: required('RESEND_API_KEY'),
   CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:5175',
+  RABBITMQ_URL: process.env.RABBITMQ_URL || 'amqp://localhost',
 };
